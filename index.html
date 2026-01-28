@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ultimate CPS Test</title>
+<style>
+    body { font-family: sans-serif; text-align: center; background: #f8f8f8; margin: 0; }
+    h1 { margin-top: 40px; }
+    .button { display: inline-block; margin: 10px; padding: 15px 30px; background: #ccc; border-radius: 10px; cursor: pointer; user-select: none; }
+    .button:hover { background: #aaf; }
+    #leaderboards { display: none; margin-top: 20px; }
+    #results { display: none; margin-top: 20px; }
+    #test-area { display: none; margin-top: 40px; padding: 40px; background: #eee; cursor: pointer; user-select: none; border-radius: 12px; }
+</style>
+</head>
+<body>
+
+<h1>Ultimate CPS Test</h1>
+
+<div id="main-menu">
+    <div>
+        <label for="playerName">Enter your name: </label>
+        <input type="text" id="playerName" maxlength="12" placeholder="Player">
+    </div>
+    <div style="margin-top: 20px;">
+        <div class="button" data-time="1">1s Test</div>
+        <div class="button" data-time="5">5s Test</div>
+        <div class="button" data-time="10">10s Test</div>
+        <div class="button" id="show-leaderboards">Leaderboards</div>
+    </div>
+</div>
+
+<div id="test-area">
+    <h2 id="timer">Time: 0.00</h2>
+    <h2 id="clicks">Clicks: 0</h2>
+    <p>Click anywhere in this box!</p>
+</div>
+
+<div id="results">
+    <h2>Finished!</h2>
+    <h3 id="result-cps"></h3>
+    <h3 id="result-style"></h3>
+    <div class="button" id="back-main">Back to Menu</div>
+</div>
+
+<div id="leaderboards">
+    <h2>Leaderboards</h2>
+    <div id="boards"></div>
+    <div class="button" id="back-menu">Back to Menu</div>
+</div>
+
+<script>
+let playerNameInput = document.getElementById("playerName");
+let mainMenu = document.getElementById("main-menu");
+let testArea = document.getElementById("test-area");
+let resultsScreen = document.getElementById("results");
+let leaderboardsScreen = document.getElementById("leaderboards");
+
+let timerEl = document.getElementById("timer");
+let clicksEl = document.getElementById("clicks");
+let resultCpsEl = document.getElementById("result-cps");
+let resultStyleEl = document.getElementById("result-style");
+let boardsEl = document.getElementById("boards");
+
+let testTime = 0;
+let clicks = 0;
+let startTime = 0;
+let clickTimes = [];
+let running = false;
+let finishTime = 0;
+
+const AUTCLICK_THRESHOLDS = {1:20,5:18,10:16};
+
+let leaderboards = {1:[],5:[],10:[]};
+let autoclickers = [];
+
+function saveBoards() {
+    localStorage.setItem("cpsBoards", JSON.stringify({leaderboards, autoclickers}));
+}
+
+function loadBoards() {
+    let data = localStorage.getItem("cpsBoards");
+    if(data) {
+        let obj = JSON.parse(data);
+        leaderboards = obj.leaderboards || {1:[],5:[],10:[]};
+        autoclickers = obj.autoclickers || [];
+    }
+}
+
+function showMenu() {
+    mainMenu.style.display = "block";
+    testArea.style.display = "none";
+    resultsScreen.style.display = "none";
+    leaderboardsScreen.style.display = "none";
+}
+
+function showTest() {
+    mainMenu.style.display = "none";
+    testArea.style.display = "block";
+    resultsScreen.style.display = "none";
+    leaderboardsScreen.style.display = "none";
+    clicks = 0;
+    clickTimes = [];
+    startTime = 0;
+    running = true;
+    timerEl.innerText = `Time: ${testTime.toFixed(2)}`;
+    clicksEl.innerText = `Clicks: 0`;
+}
+
+function showResults(cps, style, isAuto) {
+    mainMenu.style.display = "none";
+    testArea.style.display = "none";
+    resultsScreen.style.display = "block";
+    leaderboardsScreen.style.display = "none";
+    resultCpsEl.innerText = `CPS: ${cps.toFixed(2)} ${isAuto?"(Autoclicker!)":""}`;
+    resultStyleEl.innerText = isAuto?"AUTOCLICKER DETECTED":style;
+}
+
+function showLeaderboards() {
+    mainMenu.style.display = "none";
+    testArea.style.display = "none";
+    resultsScreen.style.display = "none";
+    leaderboardsScreen.style.display = "block";
+
+    boardsEl.innerHTML = "";
+    for(let t of [1,5,10]) {
+        let div = document.createElement("div");
+        div.innerHTML = `<h3>${t}s Top CPS</h3>` + leaderboards[t].map((e,i)=>`${i+1}. ${e.name}: ${e.cps.toFixed(2)}`).join("<br>");
+        boardsEl.appendChild(div);
+    }
+    let acDiv = document.createElement("div");
+    acDiv.innerHTML = "<h3>Autoclickers</h3>" + autoclickers.map((e,i)=>`${i+1}. ${e.name}: ${e.cps.toFixed(2)} (${e.mode}s)`).join("<br>");
+    boardsEl.appendChild(acDiv);
+}
+
+function detectClickStyle(times) {
+    if(times.length<6) return "Normal Clicking";
+    let intervals = [];
+    for(let i=1;i<times.length;i++) intervals.push(times[i]-times[i-1]);
+    let avg = intervals.reduce((a,b)=>a+b,0)/intervals.length;
+    if(avg<0.08) return "Butterfly / Jitter Clicking";
+    if(avg<0.12) return "Fast Clicking";
+    return "Normal Clicking";
+}
+
+loadBoards();
+showMenu();
+
+// -------- Event Listeners --------
+document.querySelectorAll(".button[data-time]").forEach(btn=>{
+    btn.onclick = () => {
+        testTime = parseInt(btn.dataset.time);
+        if(!playerNameInput.value.trim()) playerNameInput.value="Player";
+        showTest();
+    }
+});
+
+testArea.onmousedown = ()=>{
+    if(!running) return;
+    let now = performance.now()/1000;
+    if(startTime===0) startTime = now;
+    clicks++;
+    clickTimes.push(now);
+    clicksEl.innerText = `Clicks: ${clicks}`;
+}
+
+setInterval(()=>{
+    if(running && startTime>0) {
+        let elapsed = performance.now()/1000 - startTime;
+        let remaining = Math.max(0,testTime-elapsed);
+        timerEl.innerText = `Time: ${remaining.toFixed(2)}`;
+        if(elapsed>=testTime) {
+            running=false;
+            finishTime = performance.now()/1000;
+            let cps = clicks/testTime;
+            let isAuto = cps>AUTCLICK_THRESHOLDS[testTime];
+            let style = detectClickStyle(clickTimes);
+            let name = playerNameInput.value;
+            let entry = {name,cps};
+            if(isAuto) { entry.mode=testTime; autoclickers.push(entry); autoclickers=autoclickers.sort((a,b)=>b.cps-a.cps).slice(0,5);}
+            else { leaderboards[testTime].push(entry); leaderboards[testTime]=leaderboards[testTime].sort((a,b)=>b.cps-a.cps).slice(0,5);}
+            saveBoards();
+            showResults(cps,style,isAuto);
+        }
+    }
+},50);
+
+document.getElementById("back-main").onclick=showMenu;
+document.getElementById("back-menu").onclick=showMenu;
+document.getElementById("show-leaderboards").onclick=showLeaderboards;
+</script>
+</body>
+</html>
