@@ -58,7 +58,18 @@
     body.dark .button:hover { background: #555; }
     body.dark table { background: #1f1f1f; color: #fff; }
     body.dark th { background: #444; color: #fff; }
-    body.dark tr:nth-child(even) td { background: #2a2a2a; }
+    /* Keep silver (#2) row in dark mode */
+    body.dark tr.rank-2 td { color: #000; background-color: #C0C0C0; }
+    /* Normal even rows except top3 */
+    body.dark tr:not(.rank-1):not(.rank-2):not(.rank-3):nth-child(even) td { 
+        background: #2a2a2a; 
+        color: #fff;
+    }
+    /* Normal odd rows except top3 */
+    body.dark tr:not(.rank-1):not(.rank-2):not(.rank-3):nth-child(odd) td {
+        background: #1f1f1f;
+        color: #fff;
+    }
 </style>
 
 <!-- Firebase -->
@@ -305,9 +316,7 @@ document.getElementById("back-main").onclick = showMenu;
 document.getElementById("back-menu").onclick = showMenu;
 document.getElementById("show-leaderboards").onclick = showLeaderboards;
 document.getElementById("refresh-leaderboards").onclick = ()=> fetchLeaderboards(renderLeaderboards);
-document.getElementById("toggle-dark").onclick = ()=>{
-    document.body.classList.toggle("dark");
-};
+document.getElementById("toggle-dark").onclick = ()=>{ document.body.classList.toggle("dark"); };
 
 showMenu();
 </script>
