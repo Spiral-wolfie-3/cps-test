@@ -174,7 +174,6 @@ function showResults(cps,style,isAuto){ mainMenu.style.display="none"; testArea.
 // ---------- Leaderboards ----------
 function renderLeaderboards(data){
     boardsEl.innerHTML="";
-    // Combine all into global array
     let globalScores=[...data[1],...data[5],...data[10]];
     globalScores.sort((a,b)=>b.cps-a.cps);
     let table=document.createElement("table");
@@ -192,14 +191,25 @@ document.querySelectorAll(".button[data-time]").forEach(btn=>btn.onclick=()=>{
     testTime=parseInt(btn.dataset.time); if(!playerNameInput.value.trim())playerNameInput.value="Player"; showTest();
 });
 
-testArea.onmousedown=e=>{
+// ---------- Click with animation ----------
+testArea.onmousedown = e => {
     if(!running) return;
-    let now=performance.now()/1000;
+    let now = performance.now()/1000;
     if(startTime===0) startTime=now;
-    clicks++; clickTimes.push(now); clicksEl.innerText=`Clicks: ${clicks}`;
-    // ---------- Click animation ----------
-    let circle=document.createElement("div"); circle.className="click-circle"; circle.style.left=e.offsetX+"px"; circle.style.top=e.offsetY+"px";
-    testArea.appendChild(circle); setTimeout(()=>circle.remove(),500);
+    clicks++; clickTimes.push(now);
+    clicksEl.innerText=`Clicks: ${clicks}`;
+
+    // Calculate exact position inside testArea
+    const rect = testArea.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    let y = e.clientY - rect.top;
+
+    let circle = document.createElement("div");
+    circle.className = "click-circle";
+    circle.style.left = x + "px";
+    circle.style.top = y + "px";
+    testArea.appendChild(circle);
+    setTimeout(()=>circle.remove(),500);
 };
 
 setInterval(()=>{
