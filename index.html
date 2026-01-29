@@ -68,9 +68,8 @@ let clicks = 0;
 let startTime = 0;
 let clickTimes = [];
 let running = false;
-let finishTime = 0;
 
-const AUTCLICK_THRESHOLDS = {1:20,5:18,10:16};
+const AUTCLICK_THRESHOLDS = { 1: 40 };
 
 let leaderboards = {1:[],5:[],10:[]};
 let autoclickers = [];
@@ -113,8 +112,8 @@ function showResults(cps, style, isAuto) {
     testArea.style.display = "none";
     resultsScreen.style.display = "block";
     leaderboardsScreen.style.display = "none";
-    resultCpsEl.innerText = `CPS: ${cps.toFixed(2)} ${isAuto?"(Autoclicker!)":""}`;
-    resultStyleEl.innerText = isAuto?"AUTOCLICKER DETECTED":style;
+    resultCpsEl.innerText = `CPS: ${cps.toFixed(2)} ${isAuto ? "(Autoclicker!)" : ""}`;
+    resultStyleEl.innerText = isAuto ? "AUTOCLICKER DETECTED" : style;
 }
 
 function showLeaderboards() {
@@ -126,69 +125,101 @@ function showLeaderboards() {
     boardsEl.innerHTML = "";
     for(let t of [1,5,10]) {
         let div = document.createElement("div");
-        div.innerHTML = `<h3>${t}s Top CPS</h3>` + leaderboards[t].map((e,i)=>`${i+1}. ${e.name}: ${e.cps.toFixed(2)}`).join("<br>");
+        div.innerHTML = `<h3>${t}s Top CPS</h3>` +
+            leaderboards[t].map((e,i)=>`${i+1}. ${e.name}: ${e.cps.toFixed(2)}`).join("<br>");
         boardsEl.appendChild(div);
     }
+
     let acDiv = document.createElement("div");
-    acDiv.innerHTML = "<h3>Autoclickers</h3>" + autoclickers.map((e,i)=>`${i+1}. ${e.name}: ${e.cps.toFixed(2)} (${e.mode}s)`).join("<br>");
+    acDiv.innerHTML = "<h3>Autoclickers</h3>" +
+        autoclickers.map((e,i)=>`${i+1}. ${e.name}: ${e.cps.toFixed(2)} (${e.mode}s)`).join("<br>");
     boardsEl.appendChild(acDiv);
 }
 
 function detectClickStyle(times) {
-    if(times.length<6) return "Normal Clicking";
+    if(times.length < 6) return "Normal Clicking";
     let intervals = [];
-    for(let i=1;i<times.length;i++) intervals.push(times[i]-times[i-1]);
-    let avg = intervals.reduce((a,b)=>a+b,0)/intervals.length;
-    if(avg<0.08) return "Butterfly / Jitter Clicking";
-    if(avg<0.12) return "Fast Clicking";
+    for(let i = 1; i < times.length; i++) intervals.push(times[i] - times[i-1]);
+    let avg = intervals.reduce((a,b)=>a+b,0) / intervals.length;
+    if(avg < 0.08) return "Butterfly / Jitter Clicking";
+    if(avg < 0.12) return "Fast Clicking";
     return "Normal Clicking";
+}
+
+function isConsistentClicking(times) {
+    if (times.length < 15) return false;
+
+    let intervals = [];
+    for (let i = 1; i < times.length; i++) {
+        intervals.push(times[i] - times[i - 1]);
+    }
+
+    let avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
+    let variance = intervals.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / intervals.length;
+    let stdDev = Math.sqrt(variance);
+
+    return stdDev < 0.01;
 }
 
 loadBoards();
 showMenu();
 
-// -------- Event Listeners --------
 document.querySelectorAll(".button[data-time]").forEach(btn=>{
     btn.onclick = () => {
         testTime = parseInt(btn.dataset.time);
-        if(!playerNameInput.value.trim()) playerNameInput.value="Player";
+        if(!playerNameInput.value.trim()) playerNameInput.value = "Player";
         showTest();
     }
 });
 
-testArea.onmousedown = ()=>{
+testArea.onmousedown = () => {
     if(!running) return;
-    let now = performance.now()/1000;
-    if(startTime===0) startTime = now;
+    let now = performance.now() / 1000;
+    if(startTime === 0) startTime = now;
     clicks++;
     clickTimes.push(now);
     clicksEl.innerText = `Clicks: ${clicks}`;
-}
+};
 
 setInterval(()=>{
-    if(running && startTime>0) {
+    if(running && startTime > 0) {
         let elapsed = performance.now()/1000 - startTime;
-        let remaining = Math.max(0,testTime-elapsed);
+        let remaining = Math.max(0, testTime - elapsed);
         timerEl.innerText = `Time: ${remaining.toFixed(2)}`;
-        if(elapsed>=testTime) {
-            running=false;
-            finishTime = performance.now()/1000;
-            let cps = clicks/testTime;
-            let isAuto = cps>AUTCLICK_THRESHOLDS[testTime];
+
+        if(elapsed >= testTime) {
+            running = false;
+            let cps = clicks / testTime;
             let style = detectClickStyle(clickTimes);
             let name = playerNameInput.value;
-            let entry = {name,cps};
-            if(isAuto) { entry.mode=testTime; autoclickers.push(entry); autoclickers=autoclickers.sort((a,b)=>b.cps-a.cps).slice(0,5);}
-            else { leaderboards[testTime].push(entry); leaderboards[testTime]=leaderboards[testTime].sort((a,b)=>b.cps-a.cps).slice(0,5);}
+
+            let isAuto = false;
+            if (testTime === 1) {
+                isAuto = cps > AUTCLICK_THRESHOLDS[1];
+            } else {
+                isAuto = isConsistentClicking(clickTimes);
+            }
+
+            let entry = { name, cps };
+            if(isAuto) {
+                entry.mode = testTime;
+                autoclickers.push(entry);
+                autoclickers = autoclickers.sort((a,b)=>b.cps-a.cps).slice(0,5);
+            } else {
+                leaderboards[testTime].push(entry);
+                leaderboards[testTime] = leaderboards[testTime].sort((a,b)=>b.cps-a.cps).slice(0,5);
+            }
+
             saveBoards();
-            showResults(cps,style,isAuto);
+            showResults(cps, style, isAuto);
         }
     }
-},50);
+}, 50);
 
-document.getElementById("back-main").onclick=showMenu;
-document.getElementById("back-menu").onclick=showMenu;
-document.getElementById("show-leaderboards").onclick=showLeaderboards;
+document.getElementById("back-main").onclick = showMenu;
+document.getElementById("back-menu").onclick = showMenu;
+document.getElementById("show-leaderboards").onclick = showLeaderboards;
 </script>
+
 </body>
 </html>
