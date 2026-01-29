@@ -5,51 +5,52 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Ultimate CPS Test</title>
 <style>
-body { font-family: sans-serif; text-align: center; background: #f8f8f8; color: #000; margin: 0; transition: background 0.3s, color 0.3s; }
-h1 { margin-top: 40px; }
-.button { display: inline-block; margin: 10px; padding: 15px 30px; background: #ccc; border-radius: 10px; cursor: pointer; user-select: none; transition: background 0.3s, color 0.3s; }
-.button:hover { background: #aaf; }
-#leaderboards, #achievements { display: none; margin-top: 20px; }
-#test-area { display: none; margin-top: 40px; padding: 40px; background: #eee; cursor: pointer; user-select: none; border-radius: 12px; position: relative; overflow: hidden; }
+    body { font-family: sans-serif; text-align: center; background: #f8f8f8; color: #000; margin: 0; transition: background 0.3s, color 0.3s; }
+    h1 { margin-top: 40px; }
+    .button { display: inline-block; margin: 10px; padding: 15px 30px; background: #ccc; border-radius: 10px; cursor: pointer; user-select: none; transition: background 0.3s, color 0.3s; }
+    .button:hover { background: #aaf; }
+    #leaderboards, #achievements { display: none; margin-top: 20px; }
+    #test-area { display: none; margin-top: 40px; padding: 40px; background: #eee; cursor: pointer; user-select: none; border-radius: 12px; position: relative; overflow: hidden; }
 
-/* Click animation */
-.click-circle {
-    position: absolute;
-    width: 20px; height: 20px;
-    border-radius: 50%;
-    background: rgba(255, 100, 0, 0.7);
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    animation: click-pop 0.5s forwards;
-}
-@keyframes click-pop { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
+    /* Click animation */
+    .click-circle {
+        position: absolute;
+        width: 20px; height: 20px;
+        border-radius: 50%;
+        background: rgba(255, 100, 0, 0.7);
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        animation: click-pop 0.5s forwards;
+    }
+    @keyframes click-pop { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
 
-/* Table styling */
-table { margin: 10px auto; border-collapse: collapse; width: 90%; max-width: 500px; background: #fff; border-radius: 8px; overflow: hidden; transition: background 0.3s, color 0.3s; }
-th, td { border: 1px solid #aaa; padding: 8px 12px; text-align: center; transition: background 0.3s, color 0.3s; }
-th { background: #88f; color: #fff; }
-tr:nth-child(even) td { background: #f2f2f2; }
-tr.rank-1 { background-color: #ffeb3b; color: #000; font-weight: bold; animation: glow 1s infinite alternate; }
-tr.rank-2 { background-color: #C0C0C0; color: #000; font-weight: bold; }
-tr.rank-3 { background-color: #CD7F32; color: #fff; font-weight: bold; }
-@keyframes glow { from { background-color: #ffeb3b; } to { background-color: #ffd700; } }
+    /* Table styling */
+    table { margin: 10px auto; border-collapse: collapse; width: 90%; max-width: 500px; background: #fff; border-radius: 8px; overflow: hidden; transition: background 0.3s, color 0.3s; }
+    th, td { border: 1px solid #aaa; padding: 8px 12px; text-align: center; transition: background 0.3s, color 0.3s; }
+    th { background: #88f; color: #fff; }
+    tr:nth-child(even) td { background: #f2f2f2; }
+    tr.rank-1 { background-color: #ffeb3b; color: #000; font-weight: bold; animation: glow 1s infinite alternate; }
+    tr.rank-2 { background-color: #C0C0C0; color: #000; font-weight: bold; }
+    tr.rank-3 { background-color: #CD7F32; color: #fff; font-weight: bold; }
+    @keyframes glow { from { background-color: #ffeb3b; } to { background-color: #ffd700; } }
 
-/* Dark mode */
-body.dark { background: #121212; color: #fff; }
-body.dark .button { background: #333; color: #fff; }
-body.dark .button:hover { background: #555; }
-body.dark table { background: #1f1f1f; color: #fff; }
-body.dark th { background: #444; color: #fff; }
-body.dark tr.rank-2 td { color: #000; background-color: #C0C0C0; }
-body.dark tr:not(.rank-1):not(.rank-2):not(.rank-3):nth-child(even) td { background: #2a2a2a; color: #fff; }
-body.dark tr:not(.rank-1):not(.rank-2):not(.rank-3):nth-child(odd) td { background: #1f1f1f; color: #fff; }
+    /* Dark mode */
+    body.dark { background: #121212; color: #fff; }
+    body.dark .button { background: #333; color: #fff; }
+    body.dark .button:hover { background: #555; }
+    body.dark table { background: #1f1f1f; color: #fff; }
+    body.dark th { background: #444; color: #fff; }
+    body.dark tr.rank-2 td { color: #000; background-color: #C0C0C0; }
+    body.dark tr:not(.rank-1):not(.rank-2):not(.rank-3):nth-child(even) td { background: #2a2a2a; color: #fff; }
+    body.dark tr:not(.rank-1):not(.rank-2):not(.rank-3):nth-child(odd) td { background: #1f1f1f; color: #fff; }
 
-/* Achievements */
-#achievements ul { list-style: none; padding: 0; max-width: 500px; margin: auto; }
-#achievements li { background: #88f; color: #fff; margin: 5px 0; padding: 10px; border-radius: 6px; transition: background 0.3s, color 0.3s; }
-body.dark #achievements li { background: #333; color: #fff; }
+    /* Achievements */
+    #achievements ul { list-style: none; padding: 0; max-width: 500px; margin: auto; }
+    #achievements li { background: #88f; color: #fff; margin: 5px 0; padding: 10px; border-radius: 6px; transition: background 0.3s, color 0.3s; }
+    body.dark #achievements li { background: #333; color: #fff; }
 </style>
 
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 <script>
@@ -116,22 +117,22 @@ const db = firebase.database();
 </div>
 
 <script>
-let playerNameInput = document.getElementById("playerName");
-let mainMenu = document.getElementById("main-menu");
-let testArea = document.getElementById("test-area");
-let resultsScreen = document.getElementById("results");
-let leaderboardsScreen = document.getElementById("leaderboards");
-let achievementsScreen = document.getElementById("achievements");
-let timerEl = document.getElementById("timer");
-let clicksEl = document.getElementById("clicks");
-let resultCpsEl = document.getElementById("result-cps");
-let resultStyleEl = document.getElementById("result-style");
-let boardsEl = document.getElementById("boards");
-let achieveList = document.getElementById("achieve-list");
+let playerNameInput=document.getElementById("playerName");
+let mainMenu=document.getElementById("main-menu");
+let testArea=document.getElementById("test-area");
+let resultsScreen=document.getElementById("results");
+let leaderboardsScreen=document.getElementById("leaderboards");
+let achievementsScreen=document.getElementById("achievements");
+let timerEl=document.getElementById("timer");
+let clicksEl=document.getElementById("clicks");
+let resultCpsEl=document.getElementById("result-cps");
+let resultStyleEl=document.getElementById("result-style");
+let boardsEl=document.getElementById("boards");
+let achieveList=document.getElementById("achieve-list");
 
 let testTime=0, clicks=0, startTime=0, clickTimes=[], running=false;
 const AUTCLICK_THRESHOLDS={1:40};
-let achievements = {};
+let achievements={};
 
 // ---------- Fireworks ----------
 const canvas=document.getElementById("firework-canvas");
@@ -144,7 +145,7 @@ function createFireworkAt(x,y){
     for(let i=0;i<30;i++){
         let angle=Math.random()*2*Math.PI;
         let speed=Math.random()*3+2;
-        particles.push({x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,alpha:1,color:`hsl(${Math.random()*360},100%,50%)`});
+        particles.push({x:x, y:y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, alpha:1, color:`hsl(${Math.random()*360},100%,50%)`});
     }
 }
 function animateFireworks(){
@@ -155,7 +156,9 @@ function animateFireworks(){
         ctx.beginPath();
         ctx.arc(p.x,p.y,3,0,2*Math.PI);
         ctx.fill();
-        p.x+=p.vx; p.y+=p.vy; p.alpha-=0.02;
+        p.x+=p.vx;
+        p.y+=p.vy;
+        p.alpha-=0.02;
     });
     particles=particles.filter(p=>p.alpha>0);
     requestAnimationFrame(animateFireworks);
@@ -196,6 +199,7 @@ const achievementDefs = [
     {name:"Click God", check:(cps)=>cps>=20},
     {name:"Click Legend", check:(cps)=>cps>=50},
 ];
+
 function checkAchievements(data,cps){
     achievementDefs.forEach(a=>{
         if(!achievements[a.name]){
@@ -206,8 +210,14 @@ function checkAchievements(data,cps){
         }
     });
 }
+
 function showAchievements(){ achievementsScreen.style.display="block"; mainMenu.style.display="none"; testArea.style.display="none"; resultsScreen.style.display="none"; leaderboardsScreen.style.display="none"; updateAchievementsUI(); }
-function updateAchievementsUI(){ achieveList.innerHTML=""; Object.keys(achievements).forEach(a=>achieveList.innerHTML+=`<li>${a}</li>`); }
+function updateAchievementsUI(){
+    achieveList.innerHTML="";
+    Object.keys(achievements).forEach(a=>{
+        achieveList.innerHTML+=`<li>${a}</li>`;
+    });
+}
 
 // ---------- Render Leaderboards ----------
 function renderLeaderboards(data){
@@ -287,13 +297,20 @@ setInterval(()=>{
 },50);
 
 // ---------- Buttons ----------
-document.getElementById("back-main").onclick = showMenu;
-document.getElementById("back-menu").onclick = showMenu;
-document.getElementById("back-achievements").onclick = showMenu;
-document.getElementById("show-leaderboards").onclick = ()=>{ leaderboardsScreen.style.display="block"; mainMenu.style.display="none"; testArea.style.display="none"; resultsScreen.style.display="none"; fetchLeaderboards(renderLeaderboards); };
-document.getElementById("show-achievements").onclick = showAchievements;
-document.getElementById("refresh-leaderboards").onclick = ()=>fetchLeaderboards(renderLeaderboards);
-document.getElementById("toggle-dark").onclick = ()=>document.body.classList.toggle("dark");
+document.getElementById("back-main").onclick=showMenu;
+document.getElementById("back-menu").onclick=showMenu;
+document.getElementById("refresh-leaderboards").onclick=()=>fetchLeaderboards(renderLeaderboards);
+document.getElementById("toggle-dark").onclick=()=>document.body.classList.toggle("dark");
+document.getElementById("show-leaderboards").onclick=()=>{ leaderboardsScreen.style.display="block"; mainMenu.style.display="none"; testArea.style.display="none"; resultsScreen.style.display="none"; fetchLeaderboards(renderLeaderboards); };
+document.getElementById("show-achievements").onclick=showAchievements;
+document.getElementById("back-achievements").onclick=showMenu;
+
+// ---------- Click anywhere on results to return to menu ----------
+resultsScreen.addEventListener("click", () => {
+    if (!running && resultsScreen.style.display === "block") {
+        showMenu();
+    }
+});
 
 showMenu();
 </script>
