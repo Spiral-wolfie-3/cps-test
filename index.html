@@ -41,12 +41,12 @@
         background: #f2f2f2; 
     }
 
-    /* Top score glowing animation */
-    .top-score {
-        animation: glow 1s infinite alternate;
-        font-weight: bold;
-    }
+    /* Top 3 rank styles */
+    tr.rank-1 { background-color: #ffeb3b; color: #000; font-weight: bold; animation: glow 1s infinite alternate; }
+    tr.rank-2 { background-color: #C0C0C0; color: #000; font-weight: bold; }
+    tr.rank-3 { background-color: #CD7F32; color: #fff; font-weight: bold; }
 
+    /* Glow animation */
     @keyframes glow {
         from { background-color: #ffeb3b; }
         to { background-color: #ffd700; }
@@ -222,19 +222,27 @@ function renderLeaderboards(data) {
         html += `<tr><th>Rank</th><th>Name</th><th>CPS</th></tr>`;
         data[t].sort((a,b)=>b.cps-a.cps);
         data[t].slice(0,5).forEach((e,i)=>{
-            let topClass = i === 0 ? 'top-score' : '';
-            html += `<tr class="${topClass}"><td>${i+1}</td><td>${e.name}</td><td>${e.cps.toFixed(2)}</td></tr>`;
+            let rankClass = '';
+            if(i===0) rankClass='rank-1';
+            else if(i===1) rankClass='rank-2';
+            else if(i===2) rankClass='rank-3';
+            html += `<tr class="${rankClass}"><td>${i+1}</td><td>${e.name}</td><td>${e.cps.toFixed(2)}</td></tr>`;
         });
         table.innerHTML = html;
         boardsEl.appendChild(table);
     }
 
+    // Autoclickers table
     let acTable = document.createElement("table");
     let html = `<tr><th colspan="3">Autoclickers</th></tr>`;
     html += `<tr><th>Rank</th><th>Name</th><th>CPS (Mode)</th></tr>`;
     data.autoclickers.sort((a,b)=>b.cps-a.cps);
     data.autoclickers.slice(0,5).forEach((e,i)=>{
-        html += `<tr><td>${i+1}</td><td>${e.name}</td><td>${e.cps.toFixed(2)} (${e.time}s)</td></tr>`;
+        let rankClass = '';
+        if(i===0) rankClass='rank-1';
+        else if(i===1) rankClass='rank-2';
+        else if(i===2) rankClass='rank-3';
+        html += `<tr class="${rankClass}"><td>${i+1}</td><td>${e.name}</td><td>${e.cps.toFixed(2)} (${e.time}s)</td></tr>`;
     });
     acTable.innerHTML = html;
     boardsEl.appendChild(acTable);
@@ -305,3 +313,4 @@ showMenu();
 </script>
 </body>
 </html>
+
