@@ -90,7 +90,6 @@ const firebaseConfig = {
     appId: "1:534484408750:web:03fb95ab59dc8f1902d03f",
     databaseURL: "https://wolfies-cps-test-default-rtdb.firebaseio.com"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 </script>
@@ -127,7 +126,7 @@ const db = firebase.database();
 </div>
 
 <div id="leaderboards">
-    <h2>Global Leaderboards</h2>
+    <h2>Leaderboards</h2>
     <div>
         <div class="button" id="refresh-leaderboards">Refresh Leaderboard</div>
     </div>
@@ -136,25 +135,24 @@ const db = firebase.database();
 </div>
 
 <script>
-let playerNameInput = document.getElementById("playerName");
-let mainMenu = document.getElementById("main-menu");
-let testArea = document.getElementById("test-area");
-let resultsScreen = document.getElementById("results");
-let leaderboardsScreen = document.getElementById("leaderboards");
-let timerEl = document.getElementById("timer");
-let clicksEl = document.getElementById("clicks");
-let resultCpsEl = document.getElementById("result-cps");
-let resultStyleEl = document.getElementById("result-style");
-let boardsEl = document.getElementById("boards");
+let playerNameInput=document.getElementById("playerName");
+let mainMenu=document.getElementById("main-menu");
+let testArea=document.getElementById("test-area");
+let resultsScreen=document.getElementById("results");
+let leaderboardsScreen=document.getElementById("leaderboards");
+let timerEl=document.getElementById("timer");
+let clicksEl=document.getElementById("clicks");
+let resultCpsEl=document.getElementById("result-cps");
+let resultStyleEl=document.getElementById("result-style");
+let boardsEl=document.getElementById("boards");
 
-let testTime = 0, clicks = 0, startTime = 0, clickTimes = [], running = false;
-const AUTCLICK_THRESHOLDS = {1: 40};
+let testTime=0, clicks=0, startTime=0, clickTimes=[], running=false;
+const AUTCLICK_THRESHOLDS={1:40};
 
-// ---------- Menu ----------
-function showMenu() { mainMenu.style.display="block"; testArea.style.display="none"; resultsScreen.style.display="none"; leaderboardsScreen.style.display="none"; }
-function showTest() { mainMenu.style.display="none"; testArea.style.display="block"; resultsScreen.style.display="none"; leaderboardsScreen.style.display="none"; clicks=0; clickTimes=[]; startTime=0; running=true; timerEl.innerText=`Time: ${testTime.toFixed(2)}`; clicksEl.innerText=`Clicks: 0`; }
-function detectClickStyle(times) { if(times.length<6) return "Normal Clicking"; let intervals=[]; for(let i=1;i<times.length;i++) intervals.push(times[i]-times[i-1]); let avg=intervals.reduce((a,b)=>a+b,0)/intervals.length; if(avg<0.08) return "Butterfly / Jitter Clicking"; if(avg<0.12) return "Fast Clicking"; return "Normal Clicking"; }
-function isConsistentClicking(times){if(times.length<15)return false;let intervals=[];for(let i=1;i<times.length;i++)intervals.push(times[i]-times[i-1]);let avg=intervals.reduce((a,b)=>a+b,0)/intervals.length;let variance=intervals.reduce((a,b)=>a+Math.pow(b-avg,2),0)/intervals.length;return Math.sqrt(variance)<0.01;}
+function showMenu(){ mainMenu.style.display="block"; testArea.style.display="none"; resultsScreen.style.display="none"; leaderboardsScreen.style.display="none"; }
+function showTest(){ mainMenu.style.display="none"; testArea.style.display="block"; resultsScreen.style.display="none"; leaderboardsScreen.style.display="none"; clicks=0; clickTimes=[]; startTime=0; running=true; timerEl.innerText=`Time: ${testTime.toFixed(2)}`; clicksEl.innerText=`Clicks: 0`; }
+function detectClickStyle(times){ if(times.length<6)return "Normal Clicking"; let intervals=[]; for(let i=1;i<times.length;i++)intervals.push(times[i]-times[i-1]); let avg=intervals.reduce((a,b)=>a+b,0)/intervals.length; if(avg<0.08)return "Butterfly / Jitter Clicking"; if(avg<0.12)return "Fast Clicking"; return "Normal Clicking"; }
+function isConsistentClicking(times){ if(times.length<15)return false; let intervals=[]; for(let i=1;i<times.length;i++)intervals.push(times[i]-times[i-1]); let avg=intervals.reduce((a,b)=>a+b,0)/intervals.length; let variance=intervals.reduce((a,b)=>a+Math.pow(b-avg,2),0)/intervals.length; return Math.sqrt(variance)<0.01; }
 
 // ---------- Firebase ----------
 function addScoreToFirebase(time,name,cps,isAuto=false){ const refName=isAuto?'autoclickers':`leaderboards/${time}`; db.ref(refName).push({name,cps,time}); }
@@ -174,16 +172,26 @@ function showResults(cps,style,isAuto){ mainMenu.style.display="none"; testArea.
 // ---------- Leaderboards ----------
 function renderLeaderboards(data){
     boardsEl.innerHTML="";
-    let globalScores=[...data[1],...data[5],...data[10]];
-    globalScores.sort((a,b)=>b.cps-a.cps);
-    let table=document.createElement("table");
-    let html=`<tr><th>Rank</th><th>Name</th><th>CPS</th></tr>`;
-    globalScores.slice(0,10).forEach((e,i)=>{
-        let rankClass=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'';
-        html+=`<tr class="${rankClass}"><td>${i+1}</td><td>${e.name}</td><td>${e.cps.toFixed(2)}</td></tr>`;
+    [1,5,10].forEach(t=>{
+        let table=document.createElement("table");
+        let html=`<tr><th colspan="3">${t}s Top CPS</th></tr><tr><th>Rank</th><th>Name</th><th>CPS</th></tr>`;
+        data[t].sort((a,b)=>b.cps-a.cps).slice(0,5).forEach((e,i)=>{
+            let rankClass=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'';
+            html+=`<tr class="${rankClass}"><td>${i+1}</td><td>${e.name}</td><td>${e.cps.toFixed(2)}</td></tr>`;
+        });
+        table.innerHTML=html;
+        boardsEl.appendChild(table);
     });
-    table.innerHTML=html;
-    boardsEl.appendChild(table);
+
+    // Autoclickers
+    let acTable=document.createElement("table");
+    let html=`<tr><th colspan="3">Autoclickers</th></tr><tr><th>Rank</th><th>Name</th><th>CPS (Mode)</th></tr>`;
+    data.autoclickers.sort((a,b)=>b.cps-a.cps).slice(0,5).forEach((e,i)=>{
+        let rankClass=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'';
+        html+=`<tr class="${rankClass}"><td>${i+1}</td><td>${e.name}</td><td>${e.cps.toFixed(2)} (${e.time}s)</td></tr>`;
+    });
+    acTable.innerHTML=html;
+    boardsEl.appendChild(acTable);
 }
 
 // ---------- Test Logic ----------
@@ -191,23 +199,23 @@ document.querySelectorAll(".button[data-time]").forEach(btn=>btn.onclick=()=>{
     testTime=parseInt(btn.dataset.time); if(!playerNameInput.value.trim())playerNameInput.value="Player"; showTest();
 });
 
-// ---------- Click with animation ----------
-testArea.onmousedown = e => {
+// ---------- Click animation ----------
+testArea.onmousedown=e=>{
     if(!running) return;
-    let now = performance.now()/1000;
+    let now=performance.now()/1000;
     if(startTime===0) startTime=now;
     clicks++; clickTimes.push(now);
     clicksEl.innerText=`Clicks: ${clicks}`;
 
-    // Calculate exact position inside testArea
-    const rect = testArea.getBoundingClientRect();
-    let x = e.clientX - rect.left;
-    let y = e.clientY - rect.top;
+    // Position fix
+    const rect=testArea.getBoundingClientRect();
+    let x=e.clientX-rect.left;
+    let y=e.clientY-rect.top;
 
-    let circle = document.createElement("div");
-    circle.className = "click-circle";
-    circle.style.left = x + "px";
-    circle.style.top = y + "px";
+    let circle=document.createElement("div");
+    circle.className="click-circle";
+    circle.style.left=x+"px";
+    circle.style.top=y+"px";
     testArea.appendChild(circle);
     setTimeout(()=>circle.remove(),500);
 };
