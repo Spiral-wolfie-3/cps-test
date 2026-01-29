@@ -10,6 +10,7 @@
     .button { display: inline-block; margin: 10px; padding: 15px 30px; background: #ccc; border-radius: 10px; cursor: pointer; user-select: none; transition: background 0.3s, color 0.3s; }
     .button:hover { background: #aaf; }
     #leaderboards { display: none; margin-top: 20px; }
+    #results { display: none; margin-top: 20px; }
     #test-area { display: none; margin-top: 40px; padding: 40px; background: #eee; cursor: pointer; user-select: none; border-radius: 12px; position: relative; overflow: hidden; }
 
     /* Click animation */
@@ -22,17 +23,49 @@
         pointer-events: none;
         animation: click-pop 0.5s forwards;
     }
-    @keyframes click-pop { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
+
+    @keyframes click-pop {
+        0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+    }
 
     /* Table styling */
-    table { margin: 10px auto; border-collapse: collapse; width: 90%; max-width: 500px; background: #fff; border-radius: 8px; overflow: hidden; transition: background 0.3s, color 0.3s; }
-    th, td { border: 1px solid #aaa; padding: 8px 12px; text-align: center; transition: background 0.3s, color 0.3s; }
-    th { background: #88f; color: #fff; }
-    tr:nth-child(even) td { background: #f2f2f2; }
+    table { 
+        margin: 10px auto; 
+        border-collapse: collapse; 
+        width: 90%; 
+        max-width: 500px;
+        background: #fff;
+        border-radius: 8px;
+        overflow: hidden;
+        transition: background 0.3s, color 0.3s;
+    }
+
+    th, td { 
+        border: 1px solid #aaa; 
+        padding: 8px 12px; 
+        text-align: center; 
+        transition: background 0.3s, color 0.3s;
+    }
+
+    th { 
+        background: #88f; 
+        color: #fff; 
+    }
+
+    tr:nth-child(even) td { 
+        background: #f2f2f2; 
+    }
+
+    /* Top 3 rank styles */
     tr.rank-1 { background-color: #ffeb3b; color: #000; font-weight: bold; animation: glow 1s infinite alternate; }
     tr.rank-2 { background-color: #C0C0C0; color: #000; font-weight: bold; }
     tr.rank-3 { background-color: #CD7F32; color: #fff; font-weight: bold; }
-    @keyframes glow { from { background-color: #ffeb3b; } to { background-color: #ffd700; } }
+
+    @keyframes glow {
+        from { background-color: #ffeb3b; }
+        to { background-color: #ffd700; }
+    }
 
     /* Dark mode */
     body.dark { background: #121212; color: #fff; }
@@ -43,6 +76,9 @@
     body.dark tr.rank-2 td { color: #000; background-color: #C0C0C0; }
     body.dark tr:not(.rank-1):not(.rank-2):not(.rank-3):nth-child(even) td { background: #2a2a2a; color: #fff; }
     body.dark tr:not(.rank-1):not(.rank-2):not(.rank-3):nth-child(odd) td { background: #1f1f1f; color: #fff; }
+
+    /* Firework canvas */
+    #firework-canvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 9999; }
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -62,8 +98,6 @@ const db = firebase.database();
 </script>
 
 <body>
-
-<canvas id="firework-canvas" style="position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:9999;"></canvas>
 
 <h1>Ultimate CPS Test</h1>
 
@@ -91,6 +125,7 @@ const db = firebase.database();
     <h2>Finished!</h2>
     <h3 id="result-cps"></h3>
     <h3 id="result-style"></h3>
+    <div class="button" id="back-main">Back to Menu</div>
 </div>
 
 <div id="leaderboards">
@@ -101,6 +136,9 @@ const db = firebase.database();
     <div id="boards"></div>
     <div class="button" id="back-menu">Back to Menu</div>
 </div>
+
+<!-- Firework Canvas -->
+<canvas id="firework-canvas"></canvas>
 
 <script>
 let playerNameInput=document.getElementById("playerName");
@@ -118,19 +156,28 @@ let testTime=0, clicks=0, startTime=0, clickTimes=[], running=false;
 const AUTCLICK_THRESHOLDS={1:40};
 
 // ---------- Fireworks ----------
-const canvas=document.getElementById("firework-canvas");
-const ctx=canvas.getContext("2d");
+const canvas=document.getElementById("firework-canvas"); 
+const ctx=canvas.getContext("2d"); 
 let particles=[];
-function resizeCanvas(){ canvas.width=window.innerWidth; canvas.height=window.innerHeight; }
-window.addEventListener('resize',resizeCanvas);
+function resizeCanvas(){canvas.width=window.innerWidth; canvas.height=window.innerHeight;}
+window.addEventListener('resize',resizeCanvas); 
 resizeCanvas();
-function createFireworkAt(x,y){
+
+function createFirework(){
     for(let i=0;i<30;i++){
-        let angle=Math.random()*2*Math.PI;
+        let angle=Math.random()*2*Math.PI; 
         let speed=Math.random()*3+2;
-        particles.push({x:x, y:y, vx:Math.cos(angle)*speed, vy:Math.sin(angle)*speed, alpha:1, color:`hsl(${Math.random()*360},100%,50%)`});
+        particles.push({
+            x: Math.random()*canvas.width,
+            y: Math.random()*canvas.height,
+            vx: Math.cos(angle)*speed,
+            vy: Math.sin(angle)*speed,
+            alpha: 1,
+            color: `hsl(${Math.random()*360},100%,50%)`
+        });
     }
 }
+
 function animateFireworks(){
     ctx.clearRect(0,0,canvas.width,canvas.height);
     particles.forEach(p=>{
@@ -139,20 +186,19 @@ function animateFireworks(){
         ctx.beginPath();
         ctx.arc(p.x,p.y,3,0,2*Math.PI);
         ctx.fill();
-        p.x+=p.vx;
-        p.y+=p.vy;
-        p.alpha-=0.02;
+        p.x+=p.vx; p.y+=p.vy; p.alpha-=0.02;
     });
     particles=particles.filter(p=>p.alpha>0);
     requestAnimationFrame(animateFireworks);
 }
 animateFireworks();
 
-// ---------- Menu ----------
+// ---------- Show / Test / Results ----------
 function showMenu(){ mainMenu.style.display="block"; testArea.style.display="none"; resultsScreen.style.display="none"; leaderboardsScreen.style.display="none"; }
 function showTest(){ mainMenu.style.display="none"; testArea.style.display="block"; resultsScreen.style.display="none"; leaderboardsScreen.style.display="none"; clicks=0; clickTimes=[]; startTime=0; running=true; timerEl.innerText=`Time: ${testTime.toFixed(2)}`; clicksEl.innerText=`Clicks: 0`; }
 function detectClickStyle(times){ if(times.length<6)return "Normal Clicking"; let intervals=[]; for(let i=1;i<times.length;i++)intervals.push(times[i]-times[i-1]); let avg=intervals.reduce((a,b)=>a+b,0)/intervals.length; if(avg<0.08)return "Butterfly / Jitter Clicking"; if(avg<0.12)return "Fast Clicking"; return "Normal Clicking"; }
-function isConsistentClicking(times){ if(times.length<15)return false; let intervals=[]; for(let i=1;i<times.length;i++)intervals.push(times[i]-times[i-1]); let avg=intervals.reduce((a,b)=>a+b,0)/intervals.length; let variance=intervals.reduce((a,b)=>a+Math.pow(b-avg,2),0)/intervals.length; return Math.sqrt(variance)<0.01; }
+function isConsistentClicking(times){ if(times.length<15)return false; let intervals=[]; for(let i=1;i<times.length;i++)intervals.push(times[i]-times[i-1]); let avg=intervals.reduce((a,b)=>a+b,0)/intervals.length; return Math.sqrt(intervals.reduce((a,b)=>a+Math.pow(b-avg,2),0)/intervals.length)<0.01; }
+function showResults(cps,style,isAuto){ mainMenu.style.display="none"; testArea.style.display="none"; resultsScreen.style.display="block"; leaderboardsScreen.style.display="none"; resultCpsEl.innerText=`CPS: ${cps.toFixed(2)} ${isAuto?"(Autoclicker!)":""}`; resultStyleEl.innerText=isAuto?"AUTOCLICKER DETECTED":style; }
 
 // ---------- Firebase ----------
 function addScoreToFirebase(time,name,cps,isAuto=false){ const refName=isAuto?'autoclickers':`leaderboards/${time}`; db.ref(refName).push({name,cps,time}); }
@@ -160,63 +206,55 @@ function fetchLeaderboards(callback){
     let results={1:[],5:[],10:[],autoclickers:[]},loaded=0;
     ['leaderboards/1','leaderboards/5','leaderboards/10','autoclickers'].forEach(path=>{
         db.ref(path).once('value',snapshot=>{
-            snapshot.forEach(child=>{
-                const val=child.val();
-                path.includes('autoclickers')?results.autoclickers.push(val):results[parseInt(path.split('/')[1])].push(val);
-            });
+            snapshot.forEach(child=>{ const val=child.val(); path.includes('autoclickers')?results.autoclickers.push(val):results[parseInt(path.split('/')[1])].push(val); });
             loaded++; if(loaded===4) callback(results);
         });
     });
 }
 
-// ---------- Results ----------
-function showResults(cps,style,isAuto){ mainMenu.style.display="none"; testArea.style.display="none"; resultsScreen.style.display="block"; leaderboardsScreen.style.display="none"; resultCpsEl.innerText=`CPS: ${cps.toFixed(2)} ${isAuto?"(Autoclicker!)":""}`; resultStyleEl.innerText=isAuto?"AUTOCLICKER DETECTED":style; }
-
-// ---------- Render Leaderboards ----------
+// ---------- Leaderboards ----------
 function renderLeaderboards(data){
     boardsEl.innerHTML="";
+    let fireworkTrigger=false;
+
     [1,5,10].forEach(t=>{
         let table=document.createElement("table");
         let html=`<tr><th colspan="3">${t}s Top CPS</th></tr><tr><th>Rank</th><th>Name</th><th>CPS</th></tr>`;
         data[t].sort((a,b)=>b.cps-a.cps).slice(0,5).forEach((e,i)=>{
             let rankClass=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'';
             html+=`<tr class="${rankClass}"><td>${i+1}</td><td>${e.name}</td><td>${e.cps.toFixed(2)}</td></tr>`;
+            if(i===0) fireworkTrigger=true;
         });
         table.innerHTML=html;
         boardsEl.appendChild(table);
-
-        // Fireworks above #1
-        let rank1Row = table.querySelector('.rank-1');
-        if(rank1Row){
-            let rect=rank1Row.getBoundingClientRect();
-            createFireworkAt(rect.left+rect.width/2, rect.top+rect.height/2);
-        }
     });
 
+    // Autoclickers
     let acTable=document.createElement("table");
     let html=`<tr><th colspan="3">Autoclickers</th></tr><tr><th>Rank</th><th>Name</th><th>CPS (Mode)</th></tr>`;
     data.autoclickers.sort((a,b)=>b.cps-a.cps).slice(0,5).forEach((e,i)=>{
         let rankClass=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'';
         html+=`<tr class="${rankClass}"><td>${i+1}</td><td>${e.name}</td><td>${e.cps.toFixed(2)} (${e.time}s)</td></tr>`;
+        if(i===0) fireworkTrigger=true;
     });
     acTable.innerHTML=html;
     boardsEl.appendChild(acTable);
+
+    if(fireworkTrigger) createFirework();
 }
 
 // ---------- Test Logic ----------
 document.querySelectorAll(".button[data-time]").forEach(btn=>btn.onclick=()=>{
-    testTime=parseInt(btn.dataset.time);
-    if(!playerNameInput.value.trim()) playerNameInput.value="Player";
-    showTest();
+    testTime=parseInt(btn.dataset.time); if(!playerNameInput.value.trim())playerNameInput.value="Player"; showTest();
 });
 
+// ---------- Click animation ----------
 testArea.onmousedown=e=>{
     if(!running) return;
     let now=performance.now()/1000;
     if(startTime===0) startTime=now;
     clicks++; clickTimes.push(now);
     clicksEl.innerText=`Clicks: ${clicks}`;
-
     const rect=testArea.getBoundingClientRect();
     let x=e.clientX-rect.left;
     let y=e.clientY-rect.top;
@@ -245,17 +283,14 @@ setInterval(()=>{
     }
 },50);
 
-// ---------- Buttons ----------
+// ---------- Menu Buttons ----------
+document.getElementById("back-main").onclick=showMenu;
 document.getElementById("back-menu").onclick=showMenu;
+document.getElementById("show-leaderboards").onclick=()=>{ leaderboardsScreen.style.display="block"; mainMenu.style.display="none"; testArea.style.display="none"; resultsScreen.style.display="none"; boardsEl.innerHTML="Loading..."; fetchLeaderboards(renderLeaderboards); };
 document.getElementById("refresh-leaderboards").onclick=()=>fetchLeaderboards(renderLeaderboards);
 document.getElementById("toggle-dark").onclick=()=>document.body.classList.toggle("dark");
-document.getElementById("show-leaderboards").onclick=()=>{ leaderboardsScreen.style.display="block"; mainMenu.style.display="none"; testArea.style.display="none"; resultsScreen.style.display="none"; fetchLeaderboards(renderLeaderboards); };
-
-// ---------- Click anywhere on results to return to menu ----------
-resultsScreen.addEventListener("click",()=>{ if(!running && resultsScreen.style.display==="block") showMenu(); });
 
 showMenu();
 </script>
 </body>
 </html>
-
