@@ -9,7 +9,7 @@
     h1 { margin-top: 40px; }
     .button { display: inline-block; margin: 10px; padding: 15px 30px; background: #ccc; border-radius: 10px; cursor: pointer; user-select: none; transition: background 0.3s, color 0.3s; }
     .button:hover { background: #aaf; }
-    #leaderboards, #achievements { display: none; margin-top: 20px; }
+    #leaderboards { display: none; margin-top: 20px; }
     #test-area { display: none; margin-top: 40px; padding: 40px; background: #eee; cursor: pointer; user-select: none; border-radius: 12px; position: relative; overflow: hidden; }
 
     /* Click animation */
@@ -43,14 +43,8 @@
     body.dark tr.rank-2 td { color: #000; background-color: #C0C0C0; }
     body.dark tr:not(.rank-1):not(.rank-2):not(.rank-3):nth-child(even) td { background: #2a2a2a; color: #fff; }
     body.dark tr:not(.rank-1):not(.rank-2):not(.rank-3):nth-child(odd) td { background: #1f1f1f; color: #fff; }
-
-    /* Achievements */
-    #achievements ul { list-style: none; padding: 0; max-width: 500px; margin: auto; }
-    #achievements li { background: #88f; color: #fff; margin: 5px 0; padding: 10px; border-radius: 6px; transition: background 0.3s, color 0.3s; }
-    body.dark #achievements li { background: #333; color: #fff; }
 </style>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 <script>
@@ -83,7 +77,6 @@ const db = firebase.database();
         <div class="button" data-time="5">5s Test</div>
         <div class="button" data-time="10">10s Test</div>
         <div class="button" id="show-leaderboards">Leaderboards</div>
-        <div class="button" id="show-achievements">Achievements</div>
         <div class="button" id="toggle-dark">Dark Mode</div>
     </div>
 </div>
@@ -98,7 +91,6 @@ const db = firebase.database();
     <h2>Finished!</h2>
     <h3 id="result-cps"></h3>
     <h3 id="result-style"></h3>
-    <div class="button" id="back-main">Back to Menu</div>
 </div>
 
 <div id="leaderboards">
@@ -110,29 +102,20 @@ const db = firebase.database();
     <div class="button" id="back-menu">Back to Menu</div>
 </div>
 
-<div id="achievements">
-    <h2>Achievements</h2>
-    <ul id="achieve-list"></ul>
-    <div class="button" id="back-achievements">Back to Menu</div>
-</div>
-
 <script>
 let playerNameInput=document.getElementById("playerName");
 let mainMenu=document.getElementById("main-menu");
 let testArea=document.getElementById("test-area");
 let resultsScreen=document.getElementById("results");
 let leaderboardsScreen=document.getElementById("leaderboards");
-let achievementsScreen=document.getElementById("achievements");
 let timerEl=document.getElementById("timer");
 let clicksEl=document.getElementById("clicks");
 let resultCpsEl=document.getElementById("result-cps");
 let resultStyleEl=document.getElementById("result-style");
 let boardsEl=document.getElementById("boards");
-let achieveList=document.getElementById("achieve-list");
 
 let testTime=0, clicks=0, startTime=0, clickTimes=[], running=false;
 const AUTCLICK_THRESHOLDS={1:40};
-let achievements={};
 
 // ---------- Fireworks ----------
 const canvas=document.getElementById("firework-canvas");
@@ -166,9 +149,10 @@ function animateFireworks(){
 animateFireworks();
 
 // ---------- Menu ----------
-function showMenu(){ mainMenu.style.display="block"; testArea.style.display="none"; resultsScreen.style.display="none"; leaderboardsScreen.style.display="none"; achievementsScreen.style.display="none"; }
-function showTest(){ mainMenu.style.display="none"; testArea.style.display="block"; resultsScreen.style.display="none"; leaderboardsScreen.style.display="none"; achievementsScreen.style.display="none"; clicks=0; clickTimes=[]; startTime=0; running=true; timerEl.innerText=`Time: ${testTime.toFixed(2)}`; clicksEl.innerText=`Clicks: 0`; }
-function showResults(cps,style,isAuto){ mainMenu.style.display="none"; testArea.style.display="none"; resultsScreen.style.display="block"; leaderboardsScreen.style.display="none"; achievementsScreen.style.display="none"; resultCpsEl.innerText=`CPS: ${cps.toFixed(2)} ${isAuto?"(Autoclicker!)":""}`; resultStyleEl.innerText=isAuto?"AUTOCLICKER DETECTED":style; }
+function showMenu(){ mainMenu.style.display="block"; testArea.style.display="none"; resultsScreen.style.display="none"; leaderboardsScreen.style.display="none"; }
+function showTest(){ mainMenu.style.display="none"; testArea.style.display="block"; resultsScreen.style.display="none"; leaderboardsScreen.style.display="none"; clicks=0; clickTimes=[]; startTime=0; running=true; timerEl.innerText=`Time: ${testTime.toFixed(2)}`; clicksEl.innerText=`Clicks: 0`; }
+function detectClickStyle(times){ if(times.length<6)return "Normal Clicking"; let intervals=[]; for(let i=1;i<times.length;i++)intervals.push(times[i]-times[i-1]); let avg=intervals.reduce((a,b)=>a+b,0)/intervals.length; if(avg<0.08)return "Butterfly / Jitter Clicking"; if(avg<0.12)return "Fast Clicking"; return "Normal Clicking"; }
+function isConsistentClicking(times){ if(times.length<15)return false; let intervals=[]; for(let i=1;i<times.length;i++)intervals.push(times[i]-times[i-1]); let avg=intervals.reduce((a,b)=>a+b,0)/intervals.length; let variance=intervals.reduce((a,b)=>a+Math.pow(b-avg,2),0)/intervals.length; return Math.sqrt(variance)<0.01; }
 
 // ---------- Firebase ----------
 function addScoreToFirebase(time,name,cps,isAuto=false){ const refName=isAuto?'autoclickers':`leaderboards/${time}`; db.ref(refName).push({name,cps,time}); }
@@ -185,39 +169,8 @@ function fetchLeaderboards(callback){
     });
 }
 
-// ---------- Achievements ----------
-const achievementDefs = [
-    {name:"First Blood", check: (data,pos)=>pos<=5},
-    {name:"Champion", check:(data,pos)=>pos===1},
-    {name:"Silver Touch", check:(data,pos)=>pos===2},
-    {name:"Bronze Hero", check:(data,pos)=>pos===3},
-    {name:"Podium Master", check:(data,pos,dataT)=>dataT && dataT.length>=3 && dataT[0].name===playerNameInput.value && dataT[1].name===playerNameInput.value && dataT[2].name===playerNameInput.value},
-    {name:"All-Time King", check:(data)=>[1,5,10].every(t=>data[t].some(e=>e.name===playerNameInput.value && e.cps>=data[t][0].cps))},
-    {name:"All-Time Silver", check:(data)=>[1,5,10].every(t=>data[t].some(e=>e.name===playerNameInput.value && e.cps>=data[t][1]?.cps||0))},
-    {name:"Click Novice", check:(cps)=>cps>=10},
-    {name:"Click Pro", check:(cps)=>cps>=15},
-    {name:"Click God", check:(cps)=>cps>=20},
-    {name:"Click Legend", check:(cps)=>cps>=50},
-];
-
-function checkAchievements(data,cps){
-    achievementDefs.forEach(a=>{
-        if(!achievements[a.name]){
-            let unlocked=false;
-            if(a.check.length===1) unlocked=a.check(cps);
-            else unlocked=a.check(data);
-            if(unlocked){ achievements[a.name]=true; alert(`Achievement Unlocked: ${a.name}! 🎉`); }
-        }
-    });
-}
-
-function showAchievements(){ achievementsScreen.style.display="block"; mainMenu.style.display="none"; testArea.style.display="none"; resultsScreen.style.display="none"; leaderboardsScreen.style.display="none"; updateAchievementsUI(); }
-function updateAchievementsUI(){
-    achieveList.innerHTML="";
-    Object.keys(achievements).forEach(a=>{
-        achieveList.innerHTML+=`<li>${a}</li>`;
-    });
-}
+// ---------- Results ----------
+function showResults(cps,style,isAuto){ mainMenu.style.display="none"; testArea.style.display="none"; resultsScreen.style.display="block"; leaderboardsScreen.style.display="none"; resultCpsEl.innerText=`CPS: ${cps.toFixed(2)} ${isAuto?"(Autoclicker!)":""}`; resultStyleEl.innerText=isAuto?"AUTOCLICKER DETECTED":style; }
 
 // ---------- Render Leaderboards ----------
 function renderLeaderboards(data){
@@ -240,7 +193,6 @@ function renderLeaderboards(data){
         }
     });
 
-    // Autoclickers table
     let acTable=document.createElement("table");
     let html=`<tr><th colspan="3">Autoclickers</th></tr><tr><th>Rank</th><th>Name</th><th>CPS (Mode)</th></tr>`;
     data.autoclickers.sort((a,b)=>b.cps-a.cps).slice(0,5).forEach((e,i)=>{
@@ -249,8 +201,6 @@ function renderLeaderboards(data){
     });
     acTable.innerHTML=html;
     boardsEl.appendChild(acTable);
-
-    checkAchievements(data,clicks/testTime);
 }
 
 // ---------- Test Logic ----------
@@ -267,7 +217,6 @@ testArea.onmousedown=e=>{
     clicks++; clickTimes.push(now);
     clicksEl.innerText=`Clicks: ${clicks}`;
 
-    // Click animation
     const rect=testArea.getBoundingClientRect();
     let x=e.clientX-rect.left;
     let y=e.clientY-rect.top;
@@ -297,20 +246,13 @@ setInterval(()=>{
 },50);
 
 // ---------- Buttons ----------
-document.getElementById("back-main").onclick=showMenu;
 document.getElementById("back-menu").onclick=showMenu;
 document.getElementById("refresh-leaderboards").onclick=()=>fetchLeaderboards(renderLeaderboards);
 document.getElementById("toggle-dark").onclick=()=>document.body.classList.toggle("dark");
 document.getElementById("show-leaderboards").onclick=()=>{ leaderboardsScreen.style.display="block"; mainMenu.style.display="none"; testArea.style.display="none"; resultsScreen.style.display="none"; fetchLeaderboards(renderLeaderboards); };
-document.getElementById("show-achievements").onclick=showAchievements;
-document.getElementById("back-achievements").onclick=showMenu;
 
 // ---------- Click anywhere on results to return to menu ----------
-resultsScreen.addEventListener("click", () => {
-    if (!running && resultsScreen.style.display === "block") {
-        showMenu();
-    }
-});
+resultsScreen.addEventListener("click",()=>{ if(!running && resultsScreen.style.display==="block") showMenu(); });
 
 showMenu();
 </script>
