@@ -11,7 +11,23 @@
     .button:hover { background: #aaf; }
     #leaderboards { display: none; margin-top: 20px; }
     #results { display: none; margin-top: 20px; }
-    #test-area { display: none; margin-top: 40px; padding: 40px; background: #eee; cursor: pointer; user-select: none; border-radius: 12px; }
+    #test-area { display: none; margin-top: 40px; padding: 40px; background: #eee; cursor: pointer; user-select: none; border-radius: 12px; position: relative; overflow: hidden; }
+
+    /* Click animation */
+    .click-circle {
+        position: absolute;
+        width: 20px; height: 20px;
+        border-radius: 50%;
+        background: rgba(255, 100, 0, 0.7);
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        animation: click-pop 0.5s forwards;
+    }
+
+    @keyframes click-pop {
+        0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+    }
 
     /* Table styling */
     table { 
@@ -46,7 +62,6 @@
     tr.rank-2 { background-color: #C0C0C0; color: #000; font-weight: bold; }
     tr.rank-3 { background-color: #CD7F32; color: #fff; font-weight: bold; }
 
-    /* Glow animation */
     @keyframes glow {
         from { background-color: #ffeb3b; }
         to { background-color: #ffd700; }
@@ -58,25 +73,15 @@
     body.dark .button:hover { background: #555; }
     body.dark table { background: #1f1f1f; color: #fff; }
     body.dark th { background: #444; color: #fff; }
-    /* Keep silver (#2) row in dark mode */
     body.dark tr.rank-2 td { color: #000; background-color: #C0C0C0; }
-    /* Normal even rows except top3 */
-    body.dark tr:not(.rank-1):not(.rank-2):not(.rank-3):nth-child(even) td { 
-        background: #2a2a2a; 
-        color: #fff;
-    }
-    /* Normal odd rows except top3 */
-    body.dark tr:not(.rank-1):not(.rank-2):not(.rank-3):nth-child(odd) td {
-        background: #1f1f1f;
-        color: #fff;
-    }
+    body.dark tr:not(.rank-1):not(.rank-2):not(.rank-3):nth-child(even) td { background: #2a2a2a; color: #fff; }
+    body.dark tr:not(.rank-1):not(.rank-2):not(.rank-3):nth-child(odd) td { background: #1f1f1f; color: #fff; }
 </style>
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 <script>
-  const firebaseConfig = {
+const firebaseConfig = {
     apiKey: "AIzaSyB3SSl9d9Qj7WPg24GWqcRLNObVSbFPqB0",
     authDomain: "wolfies-cps-test.firebaseapp.com",
     projectId: "wolfies-cps-test",
@@ -84,12 +89,12 @@
     messagingSenderId: "534484408750",
     appId: "1:534484408750:web:03fb95ab59dc8f1902d03f",
     databaseURL: "https://wolfies-cps-test-default-rtdb.firebaseio.com"
-  };
+};
 
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
 </script>
-</head>
+
 <body>
 
 <h1>Ultimate CPS Test</h1>
@@ -122,7 +127,7 @@
 </div>
 
 <div id="leaderboards">
-    <h2>Leaderboards</h2>
+    <h2>Global Leaderboards</h2>
     <div>
         <div class="button" id="refresh-leaderboards">Refresh Leaderboard</div>
     </div>
@@ -136,187 +141,90 @@ let mainMenu = document.getElementById("main-menu");
 let testArea = document.getElementById("test-area");
 let resultsScreen = document.getElementById("results");
 let leaderboardsScreen = document.getElementById("leaderboards");
-
 let timerEl = document.getElementById("timer");
 let clicksEl = document.getElementById("clicks");
 let resultCpsEl = document.getElementById("result-cps");
 let resultStyleEl = document.getElementById("result-style");
 let boardsEl = document.getElementById("boards");
 
-let testTime = 0;
-let clicks = 0;
-let startTime = 0;
-let clickTimes = [];
-let running = false;
+let testTime = 0, clicks = 0, startTime = 0, clickTimes = [], running = false;
+const AUTCLICK_THRESHOLDS = {1: 40};
 
-const AUTCLICK_THRESHOLDS = { 1: 40 };
+// ---------- Menu ----------
+function showMenu() { mainMenu.style.display="block"; testArea.style.display="none"; resultsScreen.style.display="none"; leaderboardsScreen.style.display="none"; }
+function showTest() { mainMenu.style.display="none"; testArea.style.display="block"; resultsScreen.style.display="none"; leaderboardsScreen.style.display="none"; clicks=0; clickTimes=[]; startTime=0; running=true; timerEl.innerText=`Time: ${testTime.toFixed(2)}`; clicksEl.innerText=`Clicks: 0`; }
+function detectClickStyle(times) { if(times.length<6) return "Normal Clicking"; let intervals=[]; for(let i=1;i<times.length;i++) intervals.push(times[i]-times[i-1]); let avg=intervals.reduce((a,b)=>a+b,0)/intervals.length; if(avg<0.08) return "Butterfly / Jitter Clicking"; if(avg<0.12) return "Fast Clicking"; return "Normal Clicking"; }
+function isConsistentClicking(times){if(times.length<15)return false;let intervals=[];for(let i=1;i<times.length;i++)intervals.push(times[i]-times[i-1]);let avg=intervals.reduce((a,b)=>a+b,0)/intervals.length;let variance=intervals.reduce((a,b)=>a+Math.pow(b-avg,2),0)/intervals.length;return Math.sqrt(variance)<0.01;}
 
-function showMenu() {
-    mainMenu.style.display = "block";
-    testArea.style.display = "none";
-    resultsScreen.style.display = "none";
-    leaderboardsScreen.style.display = "none";
-}
-
-function showTest() {
-    mainMenu.style.display = "none";
-    testArea.style.display = "block";
-    resultsScreen.style.display = "none";
-    leaderboardsScreen.style.display = "none";
-    clicks = 0;
-    clickTimes = [];
-    startTime = 0;
-    running = true;
-    timerEl.innerText = `Time: ${testTime.toFixed(2)}`;
-    clicksEl.innerText = `Clicks: 0`;
-}
-
-function detectClickStyle(times) {
-    if(times.length < 6) return "Normal Clicking";
-    let intervals = [];
-    for(let i = 1; i < times.length; i++) intervals.push(times[i] - times[i-1]);
-    let avg = intervals.reduce((a,b)=>a+b,0) / intervals.length;
-    if(avg < 0.08) return "Butterfly / Jitter Clicking";
-    if(avg < 0.12) return "Fast Clicking";
-    return "Normal Clicking";
-}
-
-function isConsistentClicking(times) {
-    if (times.length < 15) return false;
-    let intervals = [];
-    for (let i = 1; i < times.length; i++) intervals.push(times[i] - times[i - 1]);
-    let avg = intervals.reduce((a, b) => a + b, 0) / intervals.length;
-    let variance = intervals.reduce((a, b) => a + Math.pow(b - avg, 2), 0) / intervals.length;
-    let stdDev = Math.sqrt(variance);
-    return stdDev < 0.01;
-}
-
-// ---------- Firebase Leaderboard Functions ----------
-function addScoreToFirebase(time, name, cps, isAuto=false) {
-    const refName = isAuto ? 'autoclickers' : `leaderboards/${time}`;
-    db.ref(refName).push({ name, cps, time });
-}
-
-function fetchLeaderboards(callback) {
-    const refs = ['leaderboards/1','leaderboards/5','leaderboards/10','autoclickers'];
-    let results = {1:[],5:[],10:[], autoclickers:[]};
-    let loaded = 0;
-
-    refs.forEach(path => {
-        db.ref(path).once('value', snapshot => {
-            snapshot.forEach(child => {
-                const val = child.val();
-                if(path.includes('autoclickers')) results.autoclickers.push(val);
-                else results[parseInt(path.split('/')[1])].push(val);
-            });
-            loaded++;
-            if(loaded === refs.length) callback(results);
+// ---------- Firebase ----------
+function addScoreToFirebase(time,name,cps,isAuto=false){ const refName=isAuto?'autoclickers':`leaderboards/${time}`; db.ref(refName).push({name,cps,time}); }
+function fetchLeaderboards(callback){
+    let results={1:[],5:[],10:[],autoclickers:[]},loaded=0;
+    ['leaderboards/1','leaderboards/5','leaderboards/10','autoclickers'].forEach(path=>{
+        db.ref(path).once('value',snapshot=>{
+            snapshot.forEach(child=>{ const val=child.val(); path.includes('autoclickers')?results.autoclickers.push(val):results[parseInt(path.split('/')[1])].push(val); });
+            loaded++; if(loaded===4) callback(results);
         });
     });
 }
 
-function showResults(cps, style, isAuto) {
-    mainMenu.style.display = "none";
-    testArea.style.display = "none";
-    resultsScreen.style.display = "block";
-    leaderboardsScreen.style.display = "none";
-    resultCpsEl.innerText = `CPS: ${cps.toFixed(2)} ${isAuto ? "(Autoclicker!)" : ""}`;
-    resultStyleEl.innerText = isAuto ? "AUTOCLICKER DETECTED" : style;
-}
+// ---------- Results ----------
+function showResults(cps,style,isAuto){ mainMenu.style.display="none"; testArea.style.display="none"; resultsScreen.style.display="block"; leaderboardsScreen.style.display="none"; resultCpsEl.innerText=`CPS: ${cps.toFixed(2)} ${isAuto?"(Autoclicker!)":""}`; resultStyleEl.innerText=isAuto?"AUTOCLICKER DETECTED":style; }
 
 // ---------- Leaderboards ----------
-function renderLeaderboards(data) {
-    boardsEl.innerHTML = "";
-    for(let t of [1,5,10]) {
-        let table = document.createElement("table");
-        let html = `<tr><th colspan="3">${t}s Top CPS</th></tr>`;
-        html += `<tr><th>Rank</th><th>Name</th><th>CPS</th></tr>`;
-        data[t].sort((a,b)=>b.cps-a.cps);
-        data[t].slice(0,5).forEach((e,i)=>{
-            let rankClass = '';
-            if(i===0) rankClass='rank-1';
-            else if(i===1) rankClass='rank-2';
-            else if(i===2) rankClass='rank-3';
-            html += `<tr class="${rankClass}"><td>${i+1}</td><td>${e.name}</td><td>${e.cps.toFixed(2)}</td></tr>`;
-        });
-        table.innerHTML = html;
-        boardsEl.appendChild(table);
-    }
-
-    // Autoclickers table
-    let acTable = document.createElement("table");
-    let html = `<tr><th colspan="3">Autoclickers</th></tr>`;
-    html += `<tr><th>Rank</th><th>Name</th><th>CPS (Mode)</th></tr>`;
-    data.autoclickers.sort((a,b)=>b.cps-a.cps);
-    data.autoclickers.slice(0,5).forEach((e,i)=>{
-        let rankClass = '';
-        if(i===0) rankClass='rank-1';
-        else if(i===1) rankClass='rank-2';
-        else if(i===2) rankClass='rank-3';
-        html += `<tr class="${rankClass}"><td>${i+1}</td><td>${e.name}</td><td>${e.cps.toFixed(2)} (${e.time}s)</td></tr>`;
+function renderLeaderboards(data){
+    boardsEl.innerHTML="";
+    // Combine all into global array
+    let globalScores=[...data[1],...data[5],...data[10]];
+    globalScores.sort((a,b)=>b.cps-a.cps);
+    let table=document.createElement("table");
+    let html=`<tr><th>Rank</th><th>Name</th><th>CPS</th></tr>`;
+    globalScores.slice(0,10).forEach((e,i)=>{
+        let rankClass=i===0?'rank-1':i===1?'rank-2':i===2?'rank-3':'';
+        html+=`<tr class="${rankClass}"><td>${i+1}</td><td>${e.name}</td><td>${e.cps.toFixed(2)}</td></tr>`;
     });
-    acTable.innerHTML = html;
-    boardsEl.appendChild(acTable);
-}
-
-function showLeaderboards() {
-    leaderboardsScreen.style.display = "block";
-    mainMenu.style.display = "none";
-    testArea.style.display = "none";
-    resultsScreen.style.display = "none";
-    boardsEl.innerHTML = "Loading...";
-    fetchLeaderboards(renderLeaderboards);
+    table.innerHTML=html;
+    boardsEl.appendChild(table);
 }
 
 // ---------- Test Logic ----------
-document.querySelectorAll(".button[data-time]").forEach(btn=>{
-    btn.onclick = () => {
-        testTime = parseInt(btn.dataset.time);
-        if(!playerNameInput.value.trim()) playerNameInput.value = "Player";
-        showTest();
-    }
+document.querySelectorAll(".button[data-time]").forEach(btn=>btn.onclick=()=>{
+    testTime=parseInt(btn.dataset.time); if(!playerNameInput.value.trim())playerNameInput.value="Player"; showTest();
 });
 
-testArea.onmousedown = () => {
+testArea.onmousedown=e=>{
     if(!running) return;
-    let now = performance.now() / 1000;
-    if(startTime === 0) startTime = now;
-    clicks++;
-    clickTimes.push(now);
-    clicksEl.innerText = `Clicks: ${clicks}`;
+    let now=performance.now()/1000;
+    if(startTime===0) startTime=now;
+    clicks++; clickTimes.push(now); clicksEl.innerText=`Clicks: ${clicks}`;
+    // ---------- Click animation ----------
+    let circle=document.createElement("div"); circle.className="click-circle"; circle.style.left=e.offsetX+"px"; circle.style.top=e.offsetY+"px";
+    testArea.appendChild(circle); setTimeout(()=>circle.remove(),500);
 };
 
 setInterval(()=>{
-    if(running && startTime > 0) {
-        let elapsed = performance.now()/1000 - startTime;
-        let remaining = Math.max(0, testTime - elapsed);
-        timerEl.innerText = `Time: ${remaining.toFixed(2)}`;
-
-        if(elapsed >= testTime) {
-            running = false;
-            let cps = clicks / testTime;
-            let style = detectClickStyle(clickTimes);
-            let name = playerNameInput.value;
-
-            let isAuto = false;
-            if (testTime === 1) {
-                isAuto = cps > AUTCLICK_THRESHOLDS[1];
-            } else {
-                isAuto = isConsistentClicking(clickTimes);
-            }
-
-            addScoreToFirebase(testTime, name, cps, isAuto);
-            showResults(cps, style, isAuto);
+    if(running && startTime>0){
+        let elapsed=performance.now()/1000-startTime;
+        let remaining=Math.max(0,testTime-elapsed);
+        timerEl.innerText=`Time: ${remaining.toFixed(2)}`;
+        if(elapsed>=testTime){
+            running=false;
+            let cps=clicks/testTime;
+            let style=detectClickStyle(clickTimes);
+            let name=playerNameInput.value;
+            let isAuto=testTime===1?cps>AUTCLICK_THRESHOLDS[1]:isConsistentClicking(clickTimes);
+            addScoreToFirebase(testTime,name,cps,isAuto);
+            showResults(cps,style,isAuto);
         }
     }
-}, 50);
+},50);
 
 // ---------- Menu Buttons ----------
-document.getElementById("back-main").onclick = showMenu;
-document.getElementById("back-menu").onclick = showMenu;
-document.getElementById("show-leaderboards").onclick = showLeaderboards;
-document.getElementById("refresh-leaderboards").onclick = ()=> fetchLeaderboards(renderLeaderboards);
-document.getElementById("toggle-dark").onclick = ()=>{ document.body.classList.toggle("dark"); };
+document.getElementById("back-main").onclick=showMenu;
+document.getElementById("back-menu").onclick=showMenu;
+document.getElementById("show-leaderboards").onclick=()=>{ leaderboardsScreen.style.display="block"; mainMenu.style.display="none"; testArea.style.display="none"; resultsScreen.style.display="none"; boardsEl.innerHTML="Loading..."; fetchLeaderboards(renderLeaderboards); };
+document.getElementById("refresh-leaderboards").onclick=()=>fetchLeaderboards(renderLeaderboards);
+document.getElementById("toggle-dark").onclick=()=>document.body.classList.toggle("dark");
 
 showMenu();
 </script>
